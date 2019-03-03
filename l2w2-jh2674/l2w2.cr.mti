@@ -1,0 +1,36 @@
+E:/altera/15.1/l2w2/fourByFourNodePatch.sv {1 {vlog -work work -sv -stats=none E:/altera/15.1/l2w2/fourByFourNodePatch.sv
+Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+-- Compiling module fourByFourNodePatch
+
+Top level modules:
+	fourByFourNodePatch
+
+} {} {}} E:/altera/15.1/l2w2/testNodePatch.sv {1 {vlog -work work -sv -stats=none E:/altera/15.1/l2w2/testNodePatch.sv
+Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+-- Compiling module testNodePatch
+
+Top level modules:
+	testNodePatch
+
+} {} {}} E:/altera/15.1/l2w2/multPatches.sv {1 {vlog -work work -sv -stats=none E:/altera/15.1/l2w2/multPatches.sv
+Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+-- Compiling module multPatches
+
+Top level modules:
+	multPatches
+
+} {} {}} E:/altera/15.1/l2w2/signed_mult_1_17.v {1 {vlog -work work -stats=none E:/altera/15.1/l2w2/signed_mult_1_17.v
+Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+-- Compiling module signed_mult_1_17
+
+Top level modules:
+	signed_mult_1_17
+
+} {} {}} E:/altera/15.1/l2w2/OneNode.sv {1 {vlog -work work -sv -stats=none E:/altera/15.1/l2w2/OneNode.sv
+Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+-- Compiling module OneNode
+
+Top level modules:
+	OneNode
+
+} {} {}}
