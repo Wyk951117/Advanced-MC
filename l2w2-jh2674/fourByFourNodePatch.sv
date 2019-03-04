@@ -25,9 +25,16 @@ module fourByFourNodePatch	// 4*4 patch
 	reg signed [17:0] u_2_mid_temp;
 	reg signed [17:0] u_1_right, u_1_left, u_1_up, u_1_down;
 	reg signed [17:0] u_hit_mid_temp;
-	reg signed [17:0] u_2_mid_store[3:0][3:0];
-	//reg signed [17:0] u_2_mid_init[3:0][3:0];
+	reg signed [17:0] u_2_mid_store[3:0][3:0];  // store register for output
 	reg flag;
+        
+	// register for u_1 and u_0
+	reg signed [17:0] u_2_mid_load[3:0][3:0];
+	reg signed [17:0] u_1_mid_load[3:0][3:0];
+	reg signed [17:0] u_0_mid_load[3:0][3:0];
+	reg signed [17:0] u_1_node;
+	reg signed [17:0] u_0_node;
+	
 
 	//assign u_2_mid_init = u_hit_mid;
 
@@ -83,8 +90,8 @@ module fourByFourNodePatch	// 4*4 patch
 			node_4_1: begin next_state = node_4_2;  end
 			node_4_2: begin next_state = node_4_3;  end
 			node_4_3: begin	next_state = node_4_4;  end
-			node_4_4: begin	next_state = /*store;  end
-			store: begin next_state = */node_1_1; end
+			node_4_4: begin	next_state = store;  end
+			store: begin next_state = node_1_1; end
 			
 			default:  begin	next_state = node_1_1; 	end
 		endcase
@@ -94,13 +101,17 @@ module fourByFourNodePatch	// 4*4 patch
 	begin
 		if(reset == 0) 
 		begin 
-			u_2_mid_store = u_hit_mid;	// init mid array
+			//u_2_mid_store = u_hit_mid;	// init mid array
 			u_2_mid_temp = u_hit_mid[0][0];
 			u_1_right = 0;
 			u_1_left = 0; 
 			u_1_up = 0;	
 			u_1_down = 0; 
-			u_hit_mid_temp = u_hit_mid[0][0];
+			//u_hit_mid_temp = u_hit_mid[0][0];
+
+			// load initial value into u_1 and u_0
+			u_0_mid_load = u_hit_mid;
+			u_1_mid_load = u_hit_mid;
 	
 			flag = 0;  
 		end
@@ -115,28 +126,39 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 				*/
 				node_1_1: begin	
-							    	u_2_mid_store[0][0] = u_2_mid_temp;	
-								u_hit_mid_temp = u_hit_mid[0][0];
+							    	//u_2_mid_store[0][0] = u_2_mid_temp;	
+								//u_hit_mid_temp = u_hit_mid[0][0];
+								
+								u_0_node = u_0_mid_load[0][0];
+								u_1_node = u_1_mid_load[0][0];
 								u_1_right = u_2_mid_store[0][1];
 								u_1_left = u_1_left_1; 
 								u_1_up = u_1_up_1;	
 								u_1_down = u_2_mid_store[1][0];
-				
+										
+								u_2_mid_load[0][0] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_1_2: begin 
-								u_2_mid_store[0][1] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[0][1];
+								//u_2_mid_store[0][1] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[0][1];
+		
+								u_0_node = u_0_mid_load[0][1];
+								u_1_node = u_1_mid_load[0][1];
 								u_1_right = u_2_mid_store[0][2];
 								u_1_left = u_2_mid_store[0][0]; 
 								u_1_up = u_1_up_2;	
 								u_1_down = u_2_mid_store[1][1];
 				
+								u_2_mid_load[0][1] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_1_3: begin 
-								u_2_mid_store[0][2] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[0][2];
+								//u_2_mid_store[0][2] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[0][2];
+
+								u_0_node = u_0_mid_load[0][2];
+								u_1_node = u_1_mid_load[0][2];			
 								u_1_right = u_2_mid_store[0][3];
 								u_1_left = u_2_mid_store[0][1]; 
 								u_1_up = u_1_up_3;	
@@ -145,8 +167,11 @@ module fourByFourNodePatch	// 4*4 patch
 								flag = 0;  
 						  end
 				node_1_4: begin	
-								u_2_mid_store[0][3] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[0][3];
+								//u_2_mid_store[0][3] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[0][3];
+								
+								u_0_node = u_0_mid_load[0][3];
+								u_1_node = u_1_mid_load[0][3];
 								u_1_right = u_1_right_1;
 								u_1_left = u_2_mid_store[0][2]; 
 								u_1_up = u_1_up_4;	
@@ -199,7 +224,8 @@ module fourByFourNodePatch	// 4*4 patch
 								u_1_down = u_2_mid_store[2][3];
 								
 								flag = 0;  
-						  end			    // third row
+						  end
+			    // third row
 				/*
 					o o o o
 					o o o o
@@ -319,9 +345,11 @@ module fourByFourNodePatch	// 4*4 patch
 	assign iterFlag = flag;
 
 	OneNode recycleNode(.u_2_mid(u_2_mid_temp),
-			    .clock(clock),
-		       	    .reset(reset),
-	                    .u_hit_mid(u_hit_mid_temp),
+			    //.clock(clock),
+		       	    //.reset(reset),
+	                    //.u_hit_mid(u_hit_mid_temp),
+			    .u_1_mid(u_1_node),
+			    .u_0_mid(u_0_node),
 	                    .u_1_right(u_1_right),
 	                    .u_1_left(u_1_left),
 	                    .u_1_up(u_1_up),
