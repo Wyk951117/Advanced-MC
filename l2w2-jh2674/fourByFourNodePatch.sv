@@ -28,6 +28,7 @@ module fourByFourNodePatch	// 4*4 patch
 	reg signed [17:0] u_2_mid_store[3:0][3:0];  // store register for output
 	reg flag;
         
+	integer i, j;
 	// register for u_1 and u_0
 	reg signed [17:0] u_2_mid_load[3:0][3:0];
 	reg signed [17:0] u_1_mid_load[3:0][3:0];
@@ -101,8 +102,8 @@ module fourByFourNodePatch	// 4*4 patch
 	begin
 		if(reset == 0) 
 		begin 
-			//u_2_mid_store = u_hit_mid;	// init mid array
-			u_2_mid_temp = u_hit_mid[0][0];
+			u_2_mid_store = u_hit_mid;	// init mid array
+			u_2_mid_temp = u_hit_mid[0][1];
 			u_1_right = 0;
 			u_1_left = 0; 
 			u_1_up = 0;	
@@ -110,8 +111,14 @@ module fourByFourNodePatch	// 4*4 patch
 			//u_hit_mid_temp = u_hit_mid[0][0];
 
 			// load initial value into u_1 and u_0
-			u_0_mid_load = u_hit_mid;
+			for(i = 0; i < 4; i++) begin
+				for(j = 0; j < 4; j++) begin
+					u_0_mid_load[i][j] = 0;
+				end
+			end
+			//u_0_mid_load = u_hit_mid * 0; // should be 0000
 			u_1_mid_load = u_hit_mid;
+			u_2_mid_load = u_hit_mid;
 	
 			flag = 0;  
 		end
@@ -125,51 +132,161 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 					o o o o
 				*/
-				node_1_1: begin	
-							    	//u_2_mid_store[0][0] = u_2_mid_temp;	
-								//u_hit_mid_temp = u_hit_mid[0][0];
-								
-								u_0_node = u_0_mid_load[0][0];
-								u_1_node = u_1_mid_load[0][0];
-								u_1_right = u_2_mid_store[0][1];
-								u_1_left = u_1_left_1; 
-								u_1_up = u_1_up_1;	
-								u_1_down = u_2_mid_store[1][0];
-										
-								u_2_mid_load[0][0] = u_2_mid_temp;
-								flag = 0;  
+				node_1_1: begin	cur_address = 3'd0;
+						case(sub_state)
+							
+							load_0: begin
+                                                                // read 0 from mem 
+								state_address <= cur_address;
+                                                  		state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          //  used to be u_0_node = u_0_mid_load[0][0];
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+                                                                // wait for the second cycle of read
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          //  used to be u_1_node = u_1_mid_load[0][0];
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                          //  used to be u_1_right = u_2_mid_store[0][1];
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+							load_L: begin
+								// read right from register
+								u_1_left <= u_1_left_1;
+								sub_state <= load_U;
+								end
+							load_U: begin
+								// read up from register 
+								u_1_up <= u_1_up_1;
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            // used to be u_1_down = u_2_mid_store[1][0];
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_1_2: begin 
-								//u_2_mid_store[0][1] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[0][1];
-		
-								u_0_node = u_0_mid_load[0][1];
-								u_1_node = u_1_mid_load[0][1];
-								u_1_right = u_2_mid_store[0][2];
-								u_1_left = u_2_mid_store[0][0]; 
-								u_1_up = u_1_up_2;	
-								u_1_down = u_2_mid_store[1][1];
-				
-								u_2_mid_load[0][1] = u_2_mid_temp;
-								flag = 0;  
+				node_1_2: begin cur_address = 3'd1;
+						case(sub_state):
+							write_2: begin 
+								state_address <= cur_address - 1;    // writing the node before
+								state_index <= 2'2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;                        //    used to be u_2_mid_load[0][0] = u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+								state_index <= 2'd0;
+								state_we <= 0;
+								u_0_node <= state_out;                            // used to be u_0_node = u_0_mid_load[0][1];
+								sub_state <= wait_0;
+								end	
+							wait_0: begin	
+								sub_state <= load_1;
+								end
+							load_1: begin
+								state_address <= cur_address;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_node <= state_out;                            // used to be u_1_node = u_1_mid_load[0][1];
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								sub_state <= load_R;
+								end
+							load_R: begin
+								state_address <= cur_address + 1;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                            // used to be u_1_right = u_2_mid_store[0][2];
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                              // used to be u_1_left = u_2_mid_store[0][0]; 
+								sub_state <= wait_L;
+								end
+							wait_L: begin
+								sub_state <= load_U;
+								end
+							load_U: begin
+								// read from register
+								u_1_up <= u_1_up_2;	
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_down <= state_out;                               // used to be u_1_down = u_2_mid_store[1][1];
+								sub_state <= write_2;
+								flag <= 0;
+								end 
 						  end
-				node_1_3: begin 
-								//u_2_mid_store[0][2] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[0][2];
-
-								u_0_node = u_0_mid_load[0][2];
+				node_1_3: begin cur_address = 3'd2;
+						case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_0_node <= state_out;
+								sub_state <= wait_0;
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							
 								u_1_node = u_1_mid_load[0][2];			
 								u_1_right = u_2_mid_store[0][3];
 								u_1_left = u_2_mid_store[0][1]; 
 								u_1_up = u_1_up_3;	
 								u_1_down = u_2_mid_store[1][2];
 
+								u_2_mid_load[0][2] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_1_4: begin	
 								//u_2_mid_store[0][3] = u_2_mid_temp;
 								//u_hit_mid_temp = u_hit_mid[0][3];
-								
+								u_2_mid_load[0][2] = u_2_mid_temp;
 								u_0_node = u_0_mid_load[0][3];
 								u_1_node = u_1_mid_load[0][3];
 								u_1_right = u_1_right_1;
@@ -177,6 +294,7 @@ module fourByFourNodePatch	// 4*4 patch
 								u_1_up = u_1_up_4;	
 								u_1_down = u_2_mid_store[1][3];
 
+								u_2_mid_load[0][3] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				// second row
@@ -187,42 +305,62 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 				*/
 				node_2_1: begin 
-								u_2_mid_store[1][0] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[1][0];
+								//u_2_mid_store[1][0] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[1][0];
+								u_2_mid_load[0][3] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[1][0];
+								u_1_node = u_1_mid_load[1][0];
 								u_1_right = u_2_mid_store[1][1];
 								u_1_left = u_1_left_2; 
 								u_1_up = u_2_mid_store[0][0];	
 								u_1_down = u_2_mid_store[2][0];
-																flag <= 0;  
+								
+								u_2_mid_load[1][0] = u_2_mid_temp;
+								flag <= 0;  
 						  end
 				node_2_2: begin 
-								u_2_mid_store[1][1] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[1][1];
+								//u_2_mid_store[1][1] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[1][1];
+								u_2_mid_load[1][0] = u_2_mid_temp;
+
+								u_0_node = u_0_mid_load[1][1];
+								u_1_node = u_1_mid_load[1][1];
 								u_1_right = u_2_mid_store[1][2]; 
 								u_1_left = u_2_mid_store[1][0]; 
 								u_1_up = u_2_mid_store[0][1];	
 								u_1_down = u_2_mid_store[2][1];
 								
+								u_2_mid_load[1][1] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_2_3: begin	
-								u_2_mid_store[1][2] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[1][2];
+								//u_2_mid_store[1][2] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[1][2];
+								u_2_mid_load[1][1] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[1][2];
+								u_1_node = u_1_mid_load[1][2];
 								u_1_right = u_2_mid_store[1][3];
 								u_1_left = u_2_mid_store[1][1]; 
 								u_1_up = u_2_mid_store[0][2];	
 								u_1_down = u_2_mid_store[2][2];
 								flag = 0;
-																flag <= 0;  
+										
+								u_2_mid_load[1][2] = u_2_mid_temp;						
+								flag <= 0;  
 						  end
 				node_2_4: begin	
-								u_2_mid_store[1][3] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[1][3];
+								//u_2_mid_store[1][3] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[1][3];
+								u_2_mid_load[1][2] = u_2_mid_temp;
+
+								u_0_node = u_0_mid_load[1][3];
+								u_1_node = u_1_mid_load[1][3];
 								u_1_right = u_1_right_2;
 								u_1_left = u_2_mid_store[1][2]; 
 								u_1_up = u_2_mid_store[0][3];	
 								u_1_down = u_2_mid_store[2][3];
 								
+								u_2_mid_load[1][3] = u_2_mid_temp;
 								flag = 0;  
 						  end
 			    // third row
@@ -233,43 +371,59 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 				*/
 				node_3_1: begin 
-								u_2_mid_store[2][0] = u_2_mid_temp; 
-								u_hit_mid_temp = u_hit_mid[2][0];
+								//u_2_mid_store[2][0] = u_2_mid_temp; 
+								//u_hit_mid_temp = u_hit_mid[2][0];
+								u_2_mid_load[1][3] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[2][0];
+								u_1_node = u_1_mid_load[2][0];
 								u_1_right = u_2_mid_store[2][1];
 								u_1_left = u_1_left_3; 
 								u_1_up = u_2_mid_store[1][0];	
 								u_1_down = u_2_mid_store[3][0];
 								
+								u_2_mid_load[2][0] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_3_2: begin 
-								u_2_mid_store[2][1] = u_2_mid_temp;  
-								u_hit_mid_temp = u_hit_mid[2][1];  
+								//u_2_mid_store[2][1] = u_2_mid_temp;  
+								//u_hit_mid_temp = u_hit_mid[2][1]; 
+								u_2_mid_load[2][0] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[2][1];
+								u_1_node = u_1_mid_load[2][1]; 
 								u_1_right = u_2_mid_store[2][2];
 								u_1_left = u_2_mid_store[2][0]; 
 								u_1_up = u_2_mid_store[1][1];	
 								u_1_down = u_2_mid_store[3][1];
-								  
+								  								
+								u_2_mid_load[2][1] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_3_3: begin 
-								u_2_mid_store[2][2] = u_2_mid_temp; 
-								u_hit_mid_temp = u_hit_mid[2][2]; 
+								//u_2_mid_store[2][2] = u_2_mid_temp; 
+								//u_hit_mid_temp = u_hit_mid[2][2]; 
+								u_2_mid_load[2][1] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[2][2];
+								u_1_node = u_1_mid_load[2][2];
 								u_1_right = u_2_mid_store[2][3];
 								u_1_left = u_2_mid_store[2][1]; 
 								u_1_up = u_2_mid_store[1][2];	
 								u_1_down = u_2_mid_store[3][2];
-								
+																
+								u_2_mid_load[2][2] = u_2_mid_temp;
 								flag = 0;    
 						  end
 				node_3_4: begin	
-								u_2_mid_store[2][3] = u_2_mid_temp;  
-								u_hit_mid_temp = u_hit_mid[2][3]; 
+								//u_2_mid_store[2][3] = u_2_mid_temp;  
+								//u_hit_mid_temp = u_hit_mid[2][3];
+								u_2_mid_load[2][2] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[2][3];
+								u_1_node = u_1_mid_load[2][3]; 
 								u_1_right = u_1_right_3;
 								u_1_left = u_2_mid_store[2][2]; 
 								u_1_up = u_2_mid_store[1][3];	
 								u_1_down = u_2_mid_store[3][3];
-								
+																
+								u_2_mid_load[2][3] = u_2_mid_temp;
 								flag = 0;  
 						end
 			    // fourth row
@@ -280,44 +434,68 @@ module fourByFourNodePatch	// 4*4 patch
 					* * * *
 				*/
 				node_4_1: begin	
-								u_2_mid_store[3][0] = u_2_mid_temp;  
-								u_hit_mid_temp = u_hit_mid[3][0];
+								//u_2_mid_store[3][0] = u_2_mid_temp;  
+								//u_hit_mid_temp = u_hit_mid[3][0];
+								u_2_mid_load[2][3] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[3][0];
+								u_1_node = u_1_mid_load[3][0];
 								u_1_right = u_2_mid_store[3][1];
 								u_1_left = u_1_left_4; 
 								u_1_up = u_2_mid_store[2][0];	
 								u_1_down = u_1_down_1;
-								
+																
+								u_2_mid_load[3][0] = u_2_mid_temp;
 								flag = 0;     
 						  end
 				node_4_2: begin 
-								u_2_mid_store[3][1] = u_2_mid_temp;  
-								u_hit_mid_temp <= u_hit_mid[3][1];
+								//u_2_mid_store[3][1] = u_2_mid_temp;  
+								//u_hit_mid_temp <= u_hit_mid[3][1];
+								u_2_mid_load[3][0] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[3][1];
+								u_1_node = u_1_mid_load[3][1];
 								u_1_right = u_2_mid_store[3][2];
 								u_1_left = u_2_mid_store[3][0]; 
 								u_1_up = u_2_mid_store[2][1];	
 								u_1_down = u_1_down_2;
-								
+																								
+								u_2_mid_load[3][1] = u_2_mid_temp;
 								flag = 0;  
 						  end
 				node_4_3: begin 
-								u_2_mid_store[3][2] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[3][2];
+								//u_2_mid_store[3][2] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[3][2];
+								u_2_mid_load[3][1] = u_2_mid_temp;
+								u_0_node = u_0_mid_load[3][2];
+								u_1_node = u_1_mid_load[3][2];
 								u_1_right = u_2_mid_store[3][3];
 								u_1_left = u_2_mid_store[3][1]; 
 								u_1_up = u_2_mid_store[2][2];	
 								u_1_down = u_1_down_3;
-								   
+								   																
+								u_2_mid_load[3][2] = u_2_mid_temp;
 								flag = 0; 
 						  end
 				node_4_4: begin	
-								u_2_mid_store[3][3] = u_2_mid_temp;
-								u_hit_mid_temp = u_hit_mid[3][3];
+								//u_2_mid_store[3][3] = u_2_mid_temp;
+								//u_hit_mid_temp = u_hit_mid[3][3];
+								u_2_mid_load[3][2] = u_2_mid_temp;
+
+								u_0_node = u_0_mid_load[3][3];
+								u_1_node = u_1_mid_load[3][3];
 								u_1_right = u_1_right_4;
 								u_1_left = u_2_mid_store[3][2]; 
 								u_1_up = u_2_mid_store[2][3];	
 								u_1_down = u_1_down_4;
-								  
+								  																
+								u_2_mid_load[3][3] = u_2_mid_temp;
 								flag = 1;
+						  end
+				store: begin
+								u_2_mid_load[3][3] = u_2_mid_temp;
+								u_0_mid_load = u_1_mid_load;
+								u_1_mid_load = u_2_mid_load;
+								u_2_mid_store = u_2_mid_load;
+								flag = 0;
 						  end
 				default:  begin 
 								u_2_mid_store[0][0] = u_2_mid_temp; 
@@ -337,8 +515,9 @@ module fourByFourNodePatch	// 4*4 patch
 	begin 
 		if (flag == 1)
 		begin
-			u_2_mid = u_2_mid_store;
-			flag = 1;
+			//u_2_mid = u_2_mid_store;
+			u_2_mid = u_2_mid_load;
+			flag = 0;
 		end
 	end
 	//assign u_2_mid = u_2_mid_store;
@@ -356,5 +535,11 @@ module fourByFourNodePatch	// 4*4 patch
 	       	            .u_1_down(u_1_down),
 			    .rho(rho));
 
+	stateMachine recycleState(.out(state_out),        // 18 bits
+				  .data(state_data),      // 18 bits
+                                  .address(state_address),// 3 bits
+				  .patch_index(state_index),//2 bits
+                                  .we(state_we),
+                                  .clk(clock));
 
 endmodule
