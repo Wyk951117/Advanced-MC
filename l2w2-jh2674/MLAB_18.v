@@ -1,4 +1,4 @@
-module stateMachine(
+module MLAB_18(
  output reg signed [17:0] out,   // 18 bits output if read from mem
  input signed [17:0] data,   // 18 bits input if write to mem
  input [3:0] address,        // offset in terms of the position in a patch

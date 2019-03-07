@@ -20,7 +20,8 @@ module fourByFourNodePatch	// 4*4 patch
  input signed [17:0] u_1_down_2,    				// input from down 2 node ouput
  input signed [17:0] u_1_down_3,    				// input from down 3 node ouput
  input signed [17:0] u_1_down_4,    					// input from down 4 node ouput
- input signed [17:0] rho
+ input signed [17:0] rho,
+ input enable
 );
 	reg signed [17:0] u_2_mid_temp;
 	reg signed [17:0] u_1_right, u_1_left, u_1_up, u_1_down;
@@ -138,7 +139,7 @@ module fourByFourNodePatch	// 4*4 patch
 							load_0: begin
                                                                 // read 0 from mem 
 								state_address <= cur_address;
-                                                  		state_index <= 2'd0;    // processing on patch 0
+                                state_index <= 2'd0;    // processing on patch 0
 								state_we <= 0;          // read operation
 								u_0_node <= state_out;                          //  used to be u_0_node = u_0_mid_load[0][0];
 								sub_state <= wait_0;    // state transfer
@@ -265,7 +266,7 @@ module fourByFourNodePatch	// 4*4 patch
 								end
 							load_0: begin
 								state_address <= cur_address;
-								state_index <= 2'd1;
+								state_index <= 2'd0;
 								state_we <= 0;
 								u_0_node <= state_out;
 								sub_state <= wait_0;
@@ -273,29 +274,104 @@ module fourByFourNodePatch	// 4*4 patch
 							wait_0: begin
 								sub_state <= load_1;
 								end
-							
-								u_1_node = u_1_mid_load[0][2];			
-								u_1_right = u_2_mid_store[0][3];
-								u_1_left = u_2_mid_store[0][1]; 
-								u_1_up = u_1_up_3;	
-								u_1_down = u_2_mid_store[1][2];
-
-								u_2_mid_load[0][2] = u_2_mid_temp;
-								flag = 0;  
+							load_1: begin
+								state_address <= cur_address;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_node <= state_out;
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								sub_state <= load_R;
+								end
+							load_R: begin
+								state_address <= cur_address + 1;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;
+								sub_state <= wait_L;
+								end
+							wait_L: begin
+								sub_state <= load_U;
+								end
+							load_U: begin
+								u_1_up <= u_1_up_3;
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_down <= state_out;
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_1_4: begin	
-								//u_2_mid_store[0][3] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[0][3];
-								u_2_mid_load[0][2] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[0][3];
-								u_1_node = u_1_mid_load[0][3];
+				node_1_4: begin	cur_address = 3'd3;
+						case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+								state_index <= 2'd0;
+								state_we <= 0;
+								u_0_node <= state_out;
+								sub_state <= wait_0;
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								state_address <= cur_address;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_node <= state_out;
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								sub_state <= load_R;
+								end
+							load_R: begin
 								u_1_right = u_1_right_1;
-								u_1_left = u_2_mid_store[0][2]; 
-								u_1_up = u_1_up_4;	
-								u_1_down = u_2_mid_store[1][3];
-
-								u_2_mid_load[0][3] = u_2_mid_temp;
-								flag = 0;  
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;
+								sub_state <= wait_L;
+								end
+							wait_L: begin
+								sub_state <= load_U;
+								end
+							load_U: begin
+								u_1_up <= u_1_up_3;
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_down <= state_out;
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
 				// second row
 				/*
@@ -304,64 +380,289 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 					o o o o
 				*/
-				node_2_1: begin 
-								//u_2_mid_store[1][0] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[1][0];
-								u_2_mid_load[0][3] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[1][0];
-								u_1_node = u_1_mid_load[1][0];
-								u_1_right = u_2_mid_store[1][1];
-								u_1_left = u_1_left_2; 
-								u_1_up = u_2_mid_store[0][0];	
-								u_1_down = u_2_mid_store[2][0];
-								
-								u_2_mid_load[1][0] = u_2_mid_temp;
-								flag <= 0;  
+				node_2_1: begin cur_address = 3'd4;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								// read right from register
+								u_1_left <= u_1_left_2;
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_2_2: begin 
-								//u_2_mid_store[1][1] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[1][1];
-								u_2_mid_load[1][0] = u_2_mid_temp;
-
-								u_0_node = u_0_mid_load[1][1];
-								u_1_node = u_1_mid_load[1][1];
-								u_1_right = u_2_mid_store[1][2]; 
-								u_1_left = u_2_mid_store[1][0]; 
-								u_1_up = u_2_mid_store[0][1];	
-								u_1_down = u_2_mid_store[2][1];
-								
-								u_2_mid_load[1][1] = u_2_mid_temp;
-								flag = 0;  
+				node_2_2: begin cur_address = 3'd5;								 
+								case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_2_3: begin	
-								//u_2_mid_store[1][2] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[1][2];
-								u_2_mid_load[1][1] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[1][2];
-								u_1_node = u_1_mid_load[1][2];
-								u_1_right = u_2_mid_store[1][3];
-								u_1_left = u_2_mid_store[1][1]; 
-								u_1_up = u_2_mid_store[0][2];	
-								u_1_down = u_2_mid_store[2][2];
-								flag = 0;
-										
-								u_2_mid_load[1][2] = u_2_mid_temp;						
-								flag <= 0;  
+				node_2_3: begin	cur_address  = 3'd6;
+								case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end								
 						  end
-				node_2_4: begin	
-								//u_2_mid_store[1][3] = u_2_mid_temp;
-								//u_hit_mid_temp = u_hit_mid[1][3];
-								u_2_mid_load[1][2] = u_2_mid_temp;
-
-								u_0_node = u_0_mid_load[1][3];
-								u_1_node = u_1_mid_load[1][3];
-								u_1_right = u_1_right_2;
-								u_1_left = u_2_mid_store[1][2]; 
-								u_1_up = u_2_mid_store[0][3];	
-								u_1_down = u_2_mid_store[2][3];
-								
-								u_2_mid_load[1][3] = u_2_mid_temp;
-								flag = 0;  
+				node_2_4: begin	cur_address = 3'd7; 	
+								case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								u_1_right <= u_1_right_2;                  
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end	
 						  end
 			    // third row
 				/*
@@ -370,55 +671,291 @@ module fourByFourNodePatch	// 4*4 patch
 					* * * *
 					o o o o
 				*/
-				node_3_1: begin 
-								//u_2_mid_store[2][0] = u_2_mid_temp; 
-								//u_hit_mid_temp = u_hit_mid[2][0];
-								u_2_mid_load[1][3] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[2][0];
-								u_1_node = u_1_mid_load[2][0];
-								u_1_right = u_2_mid_store[2][1];
-								u_1_left = u_1_left_3; 
-								u_1_up = u_2_mid_store[1][0];	
-								u_1_down = u_2_mid_store[3][0];
-								
-								u_2_mid_load[2][0] = u_2_mid_temp;
-								flag = 0;  
+				node_3_1: begin cur_address = 3'd8;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								// read right from register
+								u_1_left <= u_1_left_3;
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_3_2: begin 
-								//u_2_mid_store[2][1] = u_2_mid_temp;  
-								//u_hit_mid_temp = u_hit_mid[2][1]; 
-								u_2_mid_load[2][0] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[2][1];
-								u_1_node = u_1_mid_load[2][1]; 
-								u_1_right = u_2_mid_store[2][2];
-								u_1_left = u_2_mid_store[2][0]; 
-								u_1_up = u_2_mid_store[1][1];	
-								u_1_down = u_2_mid_store[3][1];
-								  								
-								u_2_mid_load[2][1] = u_2_mid_temp;
-								flag = 0;  
+				node_3_2: begin cur_address = 3'd9;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
 						  end
-				node_3_3: begin 
-								//u_2_mid_store[2][2] = u_2_mid_temp; 
-								//u_hit_mid_temp = u_hit_mid[2][2]; 
-								u_2_mid_load[2][1] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[2][2];
-								u_1_node = u_1_mid_load[2][2];
-								u_1_right = u_2_mid_store[2][3];
-								u_1_left = u_2_mid_store[2][1]; 
-								u_1_up = u_2_mid_store[1][2];	
-								u_1_down = u_2_mid_store[3][2];
-																
-								u_2_mid_load[2][2] = u_2_mid_temp;
-								flag = 0;    
 						  end
-				node_3_4: begin	
-								//u_2_mid_store[2][3] = u_2_mid_temp;  
-								//u_hit_mid_temp = u_hit_mid[2][3];
-								u_2_mid_load[2][2] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[2][3];
-								u_1_node = u_1_mid_load[2][3]; 
-								u_1_right = u_1_right_3;
+				node_3_3: begin cur_address = 3'd10;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end
+						  end
+						  end
+				node_3_4: begin	cur_address = 3'd11;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								u_1_right <= u_1_right_3;                  
+								sub_state <= load_L;
+								end
+							load_L: begin
+								state_address <= cur_address - 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_left <= state_out;                    
+								sub_state <= wait_L;
+								end
+							wait_L: begin	
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								state_address <= cur_address + 4;   // dealing with the node below
+								state_index <= 2'd1;
+								state_we <= 0;	
+								u_1_down <= state_out;                            
+								sub_state <= wait_D;
+								end
+							wait_D: begin
+								sub_state <= write_2;
+								flag <= 0;
+								end	
 								u_1_left = u_2_mid_store[2][2]; 
 								u_1_up = u_2_mid_store[1][3];	
 								u_1_down = u_2_mid_store[3][3];
@@ -433,19 +970,68 @@ module fourByFourNodePatch	// 4*4 patch
 					o o o o
 					* * * *
 				*/
-				node_4_1: begin	
-								//u_2_mid_store[3][0] = u_2_mid_temp;  
-								//u_hit_mid_temp = u_hit_mid[3][0];
-								u_2_mid_load[2][3] = u_2_mid_temp;
-								u_0_node = u_0_mid_load[3][0];
-								u_1_node = u_1_mid_load[3][0];
-								u_1_right = u_2_mid_store[3][1];
-								u_1_left = u_1_left_4; 
-								u_1_up = u_2_mid_store[2][0];	
-								u_1_down = u_1_down_1;
-																
-								u_2_mid_load[3][0] = u_2_mid_temp;
-								flag = 0;     
+				node_4_1: begin	cur_address = 3'd12;
+							case(sub_state):
+							write_2: begin
+								state_address <= cur_address - 1;
+								state_index <= 2'd2;
+								state_we <= 1;
+								state_data <= u_2_mid_temp;
+								sub_state <= load_0;
+								end
+							load_0: begin
+								state_address <= cur_address;
+                                state_index <= 2'd0;    // processing on patch 0
+								state_we <= 0;          // read operation
+								u_0_node <= state_out;                          
+								sub_state <= wait_0;    // state transfer
+								end
+							wait_0: begin
+								sub_state <= load_1;
+								end
+							load_1: begin
+								// read 1 from mem
+								state_address <= cur_address;
+								state_index <= 2'd1;     // processing on patch 1
+								state_we <= 0;           // read operation
+								u_1_node <= state_out;                          
+								sub_state <= wait_1;
+								end
+							wait_1: begin
+								// wait for the second cycle of read
+								sub_state <= load_R;
+								end
+							load_R: begin
+								// read left from mem
+								state_address <= cur_address + 1;   // dealing with the node to the right
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_right <= state_out;                    
+								sub_state <= wait_R;
+								end
+							wait_R: begin
+								sub_state <= load_L;
+								end
+							load_L: begin
+								// read right from register
+								u_1_left <= u_1_left_4;
+								sub_state <= load_U;
+								end
+							load_U: begin
+								state_address <= cur_address - 4;   // dealing with the node above
+								state_index <= 2'd1;
+								state_we <= 0;
+								u_1_up <= state_out;
+								sub_state <= wait_U;
+								end
+							wait_U: begin
+								sub_state <= load_D;
+								end
+							load_D: begin
+								u_1_down <= u_1_down_1;                            
+								sub_state <= write_2;
+								flag <= 0;
+								end								
 						  end
 				node_4_2: begin 
 								//u_2_mid_store[3][1] = u_2_mid_temp;  
