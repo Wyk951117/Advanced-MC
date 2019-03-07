@@ -1,5 +1,5 @@
 module fourByFourNodePatch	// 4*4 patch
-(output reg signed [17:0] u_2_mid[3:0][3:0], 			// output
+(output reg signed [17:0] u_2_mid, 			        // output
  output iterFlag,									// 
  input middle,                                      // a flag indicating whether current patch is at middle
  input clock,										// clock
@@ -158,7 +158,10 @@ module fourByFourNodePatch	// 4*4 patch
 								sub_state <= wait_R;
 								end
 							wait_R: begin
-								sub_state <= load_L;
+								sub_state <= udpate_output;
+								end
+							udpate_output:    
+								state_address <= cur_address + 3;
 							load_L: begin
 								// read right from register
 								u_1_left <= u_1_left_1;
