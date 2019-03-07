@@ -7,7 +7,7 @@ module MLAB_18(
 );
 
 	parameter patch_size = 16;   // size of each patch
-	reg [17:0] mem [47:0];       // a huge patch contains all three patches of u0/u1/u2
+	(* ramstyle = "MLAB, no_rw_check" *)reg [17:0] mem [47:0];       // a huge patch contains all three patches of u0/u1/u2
 
 
 	always @ (posedge clk) begin
