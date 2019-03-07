@@ -1,6 +1,7 @@
 module fourByFourNodePatch	// 4*4 patch
 (output reg signed [17:0] u_2_mid[3:0][3:0], 			// output
  output iterFlag,									// 
+ input middle,                                      // a flag (0/1) indicating whether current patch is middle
  input clock,										// clock
  input reset,		       							// reset
  input signed [17:0] u_hit_mid[3:0][3:0],			// init hit in the middle
