@@ -1,6 +1,7 @@
 module multPatches
 #(parameter PATCH_NUM = 36,	// 36 patches for 24*24 grid
   parameter PATCH_NUM_DIMENSION = 6,	// 6*6=36
+  parameter MIDDLE_PATCH = 21,
   parameter PATCH_SIZE = 4) // 4*4 patch size 
 (output reg signed [17:0] mid_node_out,   // output the middle node
  input clock,							  // clock
@@ -11,7 +12,8 @@ module multPatches
 
 	reg signed [17:0] u_init[PATCH_SIZE*PATCH_SIZE*PATCH_NUM-1:0];    // inital hit value of each node, size:576 
 	reg signed [17:0] data_out[PATCH_SIZE*PATCH_SIZE-1:0];			  // output data from patch, size:16
-	integer middle;
+	wire middle;
+	
 	initial
 	begin
 		$readmemh("hit24by24.txt",u_init);
@@ -28,6 +30,7 @@ module multPatches
  			wire signed [17:0] u_1_up; 					// input from up
  			wire signed [17:0] u_1_down;   				// input from down
 
+			assign middle = (i == MIDDLE_PATCH) ? 1 : 0;
 
 			// assign input for the patch
 		    assign u_1_right = ((i % PATCH_NUM_DIMENSION) == (PATCH_NUM_DIMENSION - 1) ) ? 0 : data_out[i+1];	// the value is zero when patch in the last col
@@ -49,5 +52,11 @@ module multPatches
 									  
 	end
 	endgenerate
+	
+	always @ (posedge clock)
+	begin
+		mid_node_out <= data_out[MIDDLE_PATCH];
+	end
+	
 
  endmodule
