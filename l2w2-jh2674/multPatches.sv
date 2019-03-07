@@ -1,7 +1,8 @@
 module multPatches
 #(parameter PATCH_NUM = 36,	// 36 patches for 24*24 grid
   parameter PATCH_NUM_DIMENSION = 6,	// 6*6=36
-  parameter PATCH_SIZE = 4) // 4*4 patch size 
+  parameter PATCH_SIZE = 4,
+  parameter PATCH_NODE_NUM = 16) // 4*4 patch size 
 (output reg signed [17:0] mid_node_out,   // output the middle node
  input clock,							  // clock
  input reset,		       				  // reset
@@ -39,7 +40,7 @@ module multPatches
 									  .middle(middle),
 									  .clock(clock),
 		             			      .reset(reset),
-	                 	   		      .init(u_init[i+i*PATCH_NUM_DIMENSION]),
+	                 	   		      .init(u_init[i*PATCH_NODE_NUM:(i+1)*PATCH_NODE_NUM-1]),
 									  .u_1_right(u_1_right),  					
 									  .u_1_left_1(u_1_left),    				
 									  .u_1_up_1(u_1_up),    					
