@@ -1,26 +1,14 @@
 module fourByFourNodePatch	// 4*4 patch
 (output reg signed [17:0] u_2_mid[3:0][3:0], 			// output
  output iterFlag,									// 
- input middle,                                      // a flag (0/1) indicating whether current patch is middle
+ input middle,                                      // a flag indicating whether current patch is at middle
  input clock,										// clock
  input reset,		       							// reset
  input signed [17:0] u_hit_mid[3:0][3:0],			// init hit in the middle
- input signed [17:0] u_1_right_1,  					// input from right 1 node output
- input signed [17:0] u_1_right_2,  					// input from right 2 node output
- input signed [17:0] u_1_right_3,  					// input from right 3 node output
- input signed [17:0] u_1_right_4,  					// input from right 4 node output
- input signed [17:0] u_1_left_1,    				// input from left 1 node output
- input signed [17:0] u_1_left_2,    				// input from left 2 node output
- input signed [17:0] u_1_left_3,    				// input from left 3 node output
- input signed [17:0] u_1_left_4,    				// input from left 4 node output
- input signed [17:0] u_1_up_1,    					// input from up 1 node output
- input signed [17:0] u_1_up_2,    					// input from up 2 node output
- input signed [17:0] u_1_up_3,    					// input from up 3 node output
- input signed [17:0] u_1_up_4,    					// input from up 4 node output
- input signed [17:0] u_1_down_1,    				// input from down 1 node ouput
- input signed [17:0] u_1_down_2,    				// input from down 2 node ouput
- input signed [17:0] u_1_down_3,    				// input from down 3 node ouput
- input signed [17:0] u_1_down_4,    					// input from down 4 node ouput
+ input signed [17:0] u_right_input,  				// input from right node output
+ input signed [17:0] u_left_input,    				// input from left node output
+ input signed [17:0] u_up_input,    				// input from up node output
+ input signed [17:0] u_down_input,    				// input from down node ouput
  input signed [17:0] rho,
  input enable
 );
