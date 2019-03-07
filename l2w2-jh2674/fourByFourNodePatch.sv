@@ -4,7 +4,7 @@ module fourByFourNodePatch	// 4*4 patch
  input middle,                                      // a flag indicating whether current patch is at middle
  input clock,										// clock
  input reset,		       							// reset
- input signed [17:0] u_hit_mid[3:0][3:0],			// init hit in the middle
+ input signed [17:0] u_hit_mid[15:0],			// init hit in the middle
  input signed [17:0] u_right_input,  				// input from right node output
  input signed [17:0] u_left_input,    				// input from left node output
  input signed [17:0] u_up_input,    				// input from up node output
@@ -145,6 +145,7 @@ module fourByFourNodePatch	// 4*4 patch
                                 ram_index <= 2'd0;    // processing on patch 0
 								ram_we <= 0;          // read operation
 								sub_state <= load_u1;
+								flag <= 0;
 							end
 							load_u1: begin
 								u_0_node <= data_out;// read 0 from mem 
@@ -152,6 +153,7 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_index <= 2'd1;     // processing on patch 1
 								ram_we <= 0;           // read operation            
 								sub_state <= load_right;
+								flag <= 0;
 							end
 							load_right: begin
 								u_1_node <= data_out; // read 1 from mem  
@@ -160,6 +162,7 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_index <= 2'd1;
 								ram_we <= 0;								                  
 								sub_state <= output_right;
+								flag <= 0;
 							end
 							
 							output_right: begin   
@@ -168,11 +171,13 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_index <= 2'd1;
 								ram_we <= 0;
 								sub_state <= load_left;
+								flag <= 0;
 							end
 							load_left: begin
 								u_2_mid <= data_out;
 								u_1_left <= u_left_input;
 								sub_state <= output_down;
+								flag <= 0;
 							end
 							
 							output_down: begin
@@ -180,11 +185,13 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_index <= 2'd1;
 								ram_we <= 0;
 								sub_state <= load_up;
+								flag <= 0;
 							end
 							load_up: begin
 								u_2_mid <= data_out; 
 								u_1_up <= u_1_up_1;
 								sub_state <= load_down;
+								flag <= 0;
 							end
 							
 							load_down: begin
@@ -192,6 +199,7 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_index <= 2'd1;
 								ram_we <= 0;	
 								sub_state <= finish;
+								flag <= 0;
 							end
 							finish: begin
 								u_1_down <= data_out;
@@ -330,55 +338,66 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_address <= cur_address - 1;
 								ram_index <= 2'd2;
 								ram_we <= 1;
-								data_in <= u_2_node_out;
-								sub_state <= load_up0;
-								end
-							load_up0: begin
+								data_in <= u_2_node_out;		// write output of node_1_3
+								sub_state <= load_u0;
+							end			
+							load_u0: begin
 								ram_address <= cur_address;
 								ram_index <= 2'd0;
 								ram_we <= 0;
-								u_0_node <= data_out;
-								sub_state <= wait_0;
+								sub_state <= load_u1;
 								end
-							wait_0: begin
-								sub_state <= load_up1;
-								end
-							load_up1: begin
+							load_u1: begin
+								u_0_node <= data_out;			// read u0
+								
 								ram_address <= cur_address;
 								ram_index <= 2'd1;
 								ram_we <= 0;
-								u_1_node <= data_out;
-								sub_state <= wait_1;
+								sub_state <= output_left;
 								end
-							wait_1: begin
-								sub_state <= load_right;
-								end
-							load_right: begin
-								u_1_right = u_1_right_1;
-								sub_state <= load_left;
-								end
-							load_left: begin
-								ram_address <= cur_address - 1;
+							
+							output_left: begin
+								u_1_node <= data_out;			// read u1
+								ram_address <= cur_address - 3;
 								ram_index <= 2'd1;
 								ram_we <= 0;
-								u_1_left <= data_out;
-								sub_state <= wait_L;
+								sub_state <= load_right;
+							end
+							load_right: begin
+								u_2_mid <= data_out;			// output to the node_1_1
+								u_1_right <= u_right_input;		// read from INPUT(u_right_input)
+								sub_state <= load_left;
+							end
+								
+							load_left: begin
+								ram_address <= cur_address - 1;	
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= output_down;
 								end
-							wait_L: begin
+								
+							output_down: begin
+								u_1_left <= data_out;			// read left node 
+								ram_index <= 2'd1;
+								ram_we <= 0;
 								sub_state <= load_up;
-								end
+							end
 							load_up: begin
-								u_1_up <= u_1_up_3;
+								u_2_mid <= data_out; 			// output node_4_4
+								u_1_up <= u_up_input;			// read from INPUT(u_up_input)
 								sub_state <= load_down;
 								end
 							load_down: begin
 								ram_address <= cur_address + 4;
 								ram_index <= 2'd1;
 								ram_we <= 0;
-								u_1_down <= data_out;
-								sub_state <= write_u2;
-								flag <= 0;
+								sub_state <= finish;						
 								end
+							finish: begin
+								u_1_down <= data_out;			// read down node
+								sub_state <= write_u2;
+								flag <= 0;						// finish reading all inputs
+							end
 						  end
 				// second row
 				/*
@@ -983,62 +1002,69 @@ module fourByFourNodePatch	// 4*4 patch
 								ram_address <= cur_address - 1;
 								ram_index <= 2'd2;
 								ram_we <= 1;
-								data_in <= u_2_node_out;
-								sub_state <= load_up0;
+									data_in <= u_2_node_out;	// write output
+								sub_state <= load_u0;
 								end
-							load_up0: begin
+							load_u0: begin
 								ram_address <= cur_address;
-                                ram_index <= 2'd0;    // processing on patch 0
-								ram_we <= 0;          // read operation
-								u_0_node <= data_out;                          
-								sub_state <= wait_0;    // state transfer
+                                ram_index <= 2'd0;    
+								ram_we <= 0;          
+								                     
+								sub_state <= load_u1;
 								end
-							wait_0: begin
-								sub_state <= load_up1;
-								end
-							load_up1: begin
-								// read 1 from mem
+							load_u1: begin
+							u_0_node <= data_out;     			// read u0
 								ram_address <= cur_address;
-								ram_index <= 2'd1;     // processing on patch 1
-								ram_we <= 0;           // read operation
-								u_1_node <= data_out;                          
-								sub_state <= wait_1;
-								end
-							wait_1: begin
-								// wait for the second cycle of read
+								ram_index <= 2'd1;     
+								ram_we <= 0;           
+								                         
 								sub_state <= load_right;
 								end
 							load_right: begin
-								// read left from mem
-								ram_address <= cur_address + 1;   // dealing with the node to the right
+								u_1_node <= data_out; 			// read u1
+								ram_address <= cur_address + 1;   
+								ram_index <= 2'd1;
+								ram_we <= 0;								                  
+								sub_state <= output_right;
+								end
+								
+							output_right: begin
+								u_1_right <= data_out; 			// read right node
+								ram_address <= cur_address + 3;
 								ram_index <= 2'd1;
 								ram_we <= 0;
-								u_1_right <= data_out;                    
-								sub_state <= wait_R;
-								end
-							wait_R: begin
 								sub_state <= load_left;
-								end
+							end
 							load_left: begin
-								// read right from register
-								u_1_left <= u_1_left_4;
+								u_2_mid <= data_out;			// output node_4_4
+								u_1_left <= u_left_input;		// read from INPUT(u_left_input)
 								sub_state <= load_up;
-								end
+							end
+							
 							load_up: begin
-								ram_address <= cur_address - 4;   // dealing with the node above
+								ram_address <= cur_address - 4;  
 								ram_index <= 2'd1;
 								ram_we <= 0;
-								u_1_up <= data_out;
-								sub_state <= wait_U;
-								end
-							wait_U: begin
+								sub_state <= output_up;
+							end
+							
+							output_up: begin
+								u_1_up <= data_out;				// read up node
+								ram_address <= cur_address - 12;
+								ram_index <= 2'd1;
+								ram_we <= 0;
 								sub_state <= load_down;
-								end
+							end
 							load_down: begin
-								u_1_down <= u_1_down_1;                            
+								u_2_mid <= data_out;			// output node_1_1
+								u_1_down <= u_down_input;     	// read down node
+								sub_state <= finish;
+							end
+							
+							finish: begin		
 								sub_state <= write_u2;
 								flag <= 0;
-								end								
+							end								
 						  end
 				node_4_2: begin 
 								//u_2_mid_store[3][1] = u_2_node_out;  
@@ -1068,38 +1094,95 @@ module fourByFourNodePatch	// 4*4 patch
 								u_2_mid_load[3][2] = u_2_node_out;
 								flag = 0; 
 						  end
-				node_4_4: begin	
-								//u_2_mid_store[3][3] = u_2_node_out;
-								//u_hit_mid_temp = u_hit_mid[3][3];
-								u_2_mid_load[3][2] = u_2_node_out;
-
-								u_0_node = u_0_mid_load[3][3];
-								u_1_node = u_1_mid_load[3][3];
-								u_1_right = u_1_right_4;
-								u_1_left = u_2_mid_store[3][2]; 
-								u_1_up = u_2_mid_store[2][3];	
-								u_1_down = u_1_down_4;
-								  																
-								u_2_mid_load[3][3] = u_2_node_out;
-								flag = 1;
+				node_4_4: begin	cur_address = 4'd15
+							case(sub_state):
+							write_u2: begin
+								ram_address <= cur_address - 1;
+								ram_index <= 2'd2;
+								ram_we <= 1;
+								data_in <= u_2_node_out;		// write output of node_4_3
+								sub_state <= load_u0;
+							end			
+							load_u0: begin
+								ram_address <= cur_address;
+								ram_index <= 2'd0;
+								ram_we <= 0;
+								sub_state <= load_u1;
+								end
+							load_u1: begin
+								u_0_node <= data_out;			// read u0
+								ram_address <= cur_address;
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= output_left;
+								end
+							
+							output_left: begin
+								u_1_node <= data_out;			// read u1
+								ram_address <= cur_address - 3;
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= load_right;
+							end
+							load_right: begin
+								u_2_mid <= data_out;			// output to the node_4_1
+								u_1_right <= u_right_input;		// read from INPUT(u_right_input)
+								sub_state <= load_left;
+							end
 								
+							load_left: begin
+								ram_address <= cur_address - 1;	
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= output_up;
+								end
+								
+							output_up: begin
+								u_1_left <= data_out;			// read left node 
+								ram_address <= cur_address - 12;
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= load_down;
+							end
+							load_down: begin
+								u_2_mid <= data_out; 			// output node_4_4
+								u_1_down <= u_down_input;		// read from INPUT(u_up_input)
+								sub_state <= load_up;
+							end
+								
+							load_up: begin
+								ram_address <= cur_address -4;
+								ram_index <= 2'd1;
+								ram_we <= 0;
+								sub_state <= finish;						
+							end
+							finish: begin
+								u_1_up <= data_out;				// read up node
+								sub_state <= write_u2;
+								flag <= 0;						// finish reading all inputs
+							end		
+							endcase							
 						  end
 				store: begin
-								u_2_mid_load[3][3] = u_2_node_out;
-								u_0_mid_load = u_1_mid_load;
-								u_1_mid_load = u_2_mid_load;
-								u_2_mid_store = u_2_mid_load;
-								flag = 0;
+							case(sub_state):
+							write_u2: begin
+								ram_address <= cur_address - 1;
+								ram_index <= 2'd2;
+								ram_we <= 1;
+								data_in <= u_2_node_out;		// write output
+								sub_state <= load_u0;
+								flag <= 1;						// finish calculation for one patch
+							end			
+							endcase
 						  end
 				default:  begin 
-								u_2_mid_store[0][0] = u_2_node_out; 
-								u_hit_mid_temp = u_hit_mid[0][0];
-								u_1_right = u_2_mid_store[0][1];
-								u_1_left = u_1_left_1; 
-								u_1_up = u_1_up_1;	
-								u_1_down = u_2_mid_store[1][0];		 
-								
-								flag = 0;
+								u_1_node <= 1; 
+								u_0_node <= 2;
+								u_1_right <= 3;
+								u_1_left <= 4; 
+								u_1_up <= 5;	
+								u_1_down <= 6;		 
+								flag <= 0;
 						  end
 			endcase
 		end
