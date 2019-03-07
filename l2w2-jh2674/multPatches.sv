@@ -11,7 +11,7 @@ module multPatches
 
 	reg signed [17:0] u_init[PATCH_SIZE*PATCH_SIZE*PATCH_NUM-1:0];    // inital hit value of each node, size:576 
 	reg signed [17:0] data_out[PATCH_SIZE*PATCH_SIZE-1:0];			  // output data from patch, size:16
-	
+	integer middle;
 	initial
 	begin
 		$readmemh("hit24by24.txt",u_init);
@@ -36,6 +36,7 @@ module multPatches
 			assign u_1_down = (i > (PATCH_NUM - 3)) ? 0 : data_out[i+PATCH_NUM_DIMENSION]; 						// the value is zero when patch in the last row
 			
 			fourByFourNodePatch patch(.data_out(data_out[i]),
+									  .middle(middle),
 									  .clock(clock),
 		             			      .reset(reset),
 	                 	   		      .init(u_init[i+i*PATCH_NUM_DIMENSION]),
