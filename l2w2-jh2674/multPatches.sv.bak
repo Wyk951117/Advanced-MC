@@ -1,6 +1,7 @@
 module multPatches
 #(parameter PATCH_NUM = 36,	// 36 patches for 24*24 grid
   parameter PATCH_NUM_DIMENSION = 6,	// 6*6=36
+  parameter MIDDLE_PATCH = 21,
   parameter PATCH_SIZE = 4) // 4*4 patch size 
 (output reg signed [17:0] mid_node_out,   // output the middle node
  input clock,							  // clock
@@ -9,8 +10,9 @@ module multPatches
  input signed [17:0] rho				  // rho
 );
 
-	reg signed [17:0] u_init[PATCH_SIZE*PATCH_SIZE*PATCH_NUM-1:0];    // inital hit value of each node 
-	reg signed [17:0] data_out[PATCH_SIZE*PATCH_SIZE-1:0];
+	reg signed [17:0] u_init[PATCH_SIZE*PATCH_SIZE*PATCH_NUM-1:0];    // inital hit value of each node, size:576 
+	reg signed [17:0] data_out[PATCH_SIZE*PATCH_SIZE-1:0];			  // output data from patch, size:16
+	wire middle;
 	
 	initial
 	begin
@@ -28,6 +30,8 @@ module multPatches
  			wire signed [17:0] u_1_up; 					// input from up
  			wire signed [17:0] u_1_down;   				// input from down
 
+			if (i == MIDDLE_PATCH) begin middle = 1; end
+			else begin middle = 0; end
 
 			// assign input for the patch
 		    assign u_1_right = ((i % PATCH_NUM_DIMENSION) == (PATCH_NUM_DIMENSION - 1) ) ? 0 : data_out[i+1];	// the value is zero when patch in the last col
@@ -36,6 +40,7 @@ module multPatches
 			assign u_1_down = (i > (PATCH_NUM - 3)) ? 0 : data_out[i+PATCH_NUM_DIMENSION]; 						// the value is zero when patch in the last row
 			
 			fourByFourNodePatch patch(.data_out(data_out[i]),
+									  .middle(middle),
 									  .clock(clock),
 		             			      .reset(reset),
 	                 	   		      .init(u_init[i+i*PATCH_NUM_DIMENSION]),
@@ -43,10 +48,16 @@ module multPatches
 									  .u_1_left_1(u_1_left),    				
 									  .u_1_up_1(u_1_up),    					
 									  .u_1_down_1(u_1_down),    				
-						              .rho(rho)
+						              .rho(rho),
 									  .enable(enable));
 									  
 	end
 	endgenerate
+	
+	always @ (posedge clock)
+	begin
+		mid_node_out <= data_out[MIDDLE_PATCH];
+	end
+	
 
  endmodule
