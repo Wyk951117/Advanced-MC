@@ -42,7 +42,7 @@ module multPatches
 									  .middle(middle),
 									  .clock(clock),
 		             			      .reset(reset),
-	                 	   		      .init(u_init[i+i*PATCH_NUM_DIMENSION]),
+	                 	   		      .init(u_init[i*PATCH_NODE_NUM:(i+1)*PATCH_NODE_NUM-1]),
 									  .u_1_right(u_1_right),  					
 									  .u_1_left_1(u_1_left),    				
 									  .u_1_up_1(u_1_up),    					
